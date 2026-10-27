@@ -25,6 +25,7 @@ from studio_mcp.tools import (
     text,
     training,
     video,
+    web,
 )
 
 INSTRUCTIONS = " ".join(
@@ -59,6 +60,7 @@ TOOL_MODULES = (
     export,
     library,
     cancel,
+    web,
 )
 
 
