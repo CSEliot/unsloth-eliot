@@ -64,6 +64,15 @@ REFUSED = [
     ("chat", {"prompt": "x", "images": [{"data_url": data_url(b"text", "image/png")}]}, None),
     ("embed", {"texts": []}, None),
     ("embed", {"texts": ["x"] * 2049}, None),
+    ("web_extract", {"urls": []}, None),
+    ("web_extract", {"urls": ["https://example.com/"] * 6}, None),
+    ("web_extract", {"urls": ["https://example.com/" + "a" * 9000]}, None),
+    ("web_extract", {"urls": ["https://example.com/a"], "max_chars": 0}, None),
+    # Under the route's minimum the engine's notice would be appended past the cap, so the tool
+    # refuses it before the route instead of returning more than was asked for.
+    ("web_extract", {"urls": ["https://example.com/a"], "max_chars": 63}, None),
+    # And the top of the range, which is a refusal path of its own.
+    ("web_extract", {"urls": ["https://example.com/a"], "max_chars": 16001}, None),
     ("embed", {"texts": ["x"], "top_k": 3}, "top_k needs query."),
     ("system_one", {"state": "x", "questions": {}}, None),
     ("system_one", {"state": "x", "questions": {f"q{i}": {} for i in range(65)}}, None),

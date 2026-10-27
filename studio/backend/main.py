@@ -429,6 +429,7 @@ from routes import (
     youtube_router,
 )
 import routes.browser as _browser_routes
+import routes.web as _web_routes
 from routes.llama import router as llama_router
 from routes.engines import router as engines_router
 from routes.llama_compat import is_engine_probe_path, router as llama_compat_router
@@ -2025,6 +2026,7 @@ for _prefix, _upstream, _pages in (
     )
 app.include_router(youtube_router, prefix = "/api/youtube", tags = ["youtube"])
 app.include_router(_browser_routes.router, prefix = "/api/browser", tags = ["browser"])
+app.include_router(_web_routes.router, prefix = "/api/web", tags = ["web"])
 
 # Re-wrap /v1/* client errors into OpenAI/Anthropic envelopes; non-/v1 keeps {"detail": ...}.
 install_api_error_handlers(app)

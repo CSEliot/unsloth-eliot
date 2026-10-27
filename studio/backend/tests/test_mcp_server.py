@@ -16,6 +16,11 @@ READ_ONLY = {
     "plan_load",
     "studio_status",
     "system_one",
+    "web_extract",
+}
+# The tools that reach the open internet rather than acting on this Studio only.
+OPEN_WORLD = {
+    "web_extract",
 }
 DESTRUCTIVE = {
     "cancel",
@@ -49,7 +54,7 @@ def test_studio_mcp_registers_control_plane_tools():
     for name, tool in tools.items():
         hints = tool.annotations
         assert hints is not None, name
-        assert hints.openWorldHint is False, name
+        assert hints.openWorldHint is (name in OPEN_WORLD), name
         assert hints.readOnlyHint is (name in READ_ONLY), name
         # MCP reads an unset hint as destructive, so tools that only add work say so.
         if name not in READ_ONLY:
@@ -99,6 +104,13 @@ SCHEMA_FACTS = [
         <= set(kinds),
     ),
     ("get_job", "parameters/properties/kind/enum", lambda kinds: {"video", "recipe"} <= set(kinds)),
+    # The route bounds each URL at 8192; the tool has to agree, or an over-long URL becomes a 422.
+    ("web_extract", "parameters/properties/urls/items/maxLength", 8192),
+    ("web_extract", "parameters/properties/urls/maxItems", 5),
+    # Both schemas refuse a per-page cap under 64: the engine appends its truncation notice past
+    # the cap, so a smaller one comes back longer than the caller asked for.
+    ("web_extract", "parameters/properties/max_chars/anyOf/0/minimum", 64),
+    ("web_extract", "parameters/properties/max_chars/anyOf/0/maximum", 16000),
 ]
 
 

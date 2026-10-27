@@ -34,6 +34,8 @@ ALLOWED_PREFIXES = (
     # Read only: load_model and plan_load check whether Unsloth Studio is still downloading a variant.
     "/api/hub/download-status",
     "/api/settings/embedding-model",
+    # Read only: web_extract reads public pages and changes nothing in Unsloth Studio.
+    "/api/web/",
 )
 
 

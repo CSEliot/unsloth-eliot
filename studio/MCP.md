@@ -73,8 +73,19 @@ send an Unsloth API key as `Authorization: Bearer sk-unsloth-...`.
 
 Unsloth Studio has its own MCP server at `/mcp/`. Coding agents such as Claude Code and
 Codex can use it to load models, chat, generate images, audio and video,
-transcribe, train and export. Every tool goes through Unsloth Studio's own routes as
+transcribe, train, export and read web pages. Every tool goes through Unsloth Studio's own routes as
 your API key, so it sees what that key may see and nothing more.
+
+`web_extract` reads web pages and needs no model and no GPU: HTML comes back as
+Markdown and a PDF as its extracted text. No JavaScript runs, so a page that builds
+itself in the browser returns no readable text and asking again will not help. One
+call takes at most five URLs and returns up to about 20,000 characters in total, split
+across them, less when a model with a small context window is loaded; a URL that fails
+gets its own error and the others still come back. A call may take up to 60 s, so set
+the client's tool timeout above that.
+
+One installation-wide in-flight cap applies, with no per-account share: one busy caller
+can hold it for a whole call and other callers get a 503 until it frees up.
 
 ### Turn it on
 
@@ -297,6 +308,7 @@ api_key_format = "Bearer {token}"
 | `list_training_runs` | Past runs and their checkpoints, by name. |
 | `export_model` | Export a checkpoint to GGUF, merged weights, a LoRA adapter or the base model. |
 | `cancel` | Stop running work of a given kind; the kinds are listed in the tool's schema. |
+| `web_extract` | Read up to five web pages as text or Markdown, in the order asked for. No JavaScript runs; errors are per URL. |
 
 Long work keeps running in Unsloth Studio when a tool call times out.
 Follow every long job with `get_job(kind=…, id=…, wait_s=…)`: it checks every 2 s and returns once the job finishes, its status changes (for an export or a training run, also its phase), or `wait_s` runs out.

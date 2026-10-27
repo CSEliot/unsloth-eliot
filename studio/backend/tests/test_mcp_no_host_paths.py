@@ -57,6 +57,33 @@ TRANSCRIBE_PAYLOADS = {
     ("POST", "/v1/audio/transcriptions"): VERBOSE,
     ("POST", "/v1/audio/translations"): TRANSCRIPT,
 }
+WEB_URLS = ["https://example.com/a", "https://example.com/b"]
+
+
+def _web_answer(request, body):
+    """Answers with the https URLs it was asked for, left unpoisoned.
+
+    Unlike every other payload here the `url` strings must be real: the tool prefers the route's
+    `url`, so this case proves that a requested https URL survives the model's str field unchanged.
+    It cannot prove the tool ignores the route's echo, because the route answers with the caller's
+    own URLs here, so a regression to trusting `row["url"]` would still pass.
+    """
+    asked = json.loads(body)["urls"]
+    return {
+        "results": [
+            {
+                "url": url,
+                "text": poison("" if index else "# A"),
+                "error": None if index == 0 else poison("Failed to fetch URL: HTTP 404"),
+            }
+            for index, url in enumerate(asked)
+        ]
+    }
+
+
+WEB_PAYLOADS = {
+    ("POST", "/api/web/extract"): _web_answer,
+}
 EXPORT_PAYLOADS = {
     ("GET", "/api/models/checkpoints"): {
         **RUN_CHECKPOINTS,
@@ -141,15 +168,20 @@ CASES: dict[str, Any] = {
         (VOICE_PAYLOADS, {"action": "save", "source": {"clip_id": "clip-1"}, "name": "n"}),
         (VOICE_PAYLOADS, {"action": "rename", "voice_id": "voice-1", "name": "Host"}),
     ],
+    "web_extract": (WEB_PAYLOADS, {"urls": WEB_URLS}),
 }
 
-# Output keys that carry model-written text, which is the model's to say and is never rewritten.
+# Output keys that carry text that came from outside Unsloth Studio and is never rewritten: model
+# output, and for web_extract the page's own text. Its `url` is NOT here: the web_extract case
+# answers with the https URLs it was asked for, so what that checks is that a requested URL
+# survives the model's str field, not that the tool ignores the route's echo (it prefers it).
 MODEL_TEXT = {
     "chat": {"text"},
     "transcribe": {"text"},
     "get_job": {"data_rows"},
     "list_media": {"text"},
     "analyze_audio": {"transcript"},
+    "web_extract": {"text"},
 }
 
 

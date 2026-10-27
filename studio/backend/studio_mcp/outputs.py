@@ -797,3 +797,16 @@ class CancelResult(ToolOutput):
     id: Optional[RouteText] = None
     cancelled: bool
     message: Optional[RouteText] = None
+
+
+class WebPage(ToolOutput):
+    # The URL the caller asked for: redirects and meta-refresh hops are followed but not reported.
+    url: str
+    # Page text from the internet, as Markdown for HTML: not Studio state, so paths are left alone.
+    text: str = ""
+    # Set instead of text when this one URL failed; the other pages of the call still come back.
+    error: Optional[RouteText] = None
+
+
+class WebExtractResult(ToolOutput):
+    pages: list[WebPage] = []

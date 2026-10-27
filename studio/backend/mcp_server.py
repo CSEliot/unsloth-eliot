@@ -21,6 +21,7 @@ from studio_mcp.tools import (
     text,
     training,
     video,
+    web,
 )
 
 INSTRUCTIONS = " ".join(
@@ -59,6 +60,7 @@ def create_studio_mcp() -> FastMCP:
         export,
         library,
         cancel,
+        web,
     ):
         for tool, annotations, *schema in module.TOOLS:
             mcp.tool(
