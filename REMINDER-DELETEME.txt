@@ -1,0 +1,30 @@
+REMINDER (delete me once read): Unsloth Studio's page fetch endpoint
+
+Studio already ships an HTTP page fetcher that Hermes (or curl) can call today, with no source changes:
+
+    POST http://localhost:8888/api/browser/fetch
+    Authorization: Bearer <Studio API key>     (Hermes keeps it in HERMES_CUSTOM_LOCALHOST_8888_API_KEY)
+    Content-Type: application/json
+    {"url": "https://example.com", "max_bytes": 2000000}
+
+Response for HTML pages: JSON {url, base, html}. Other content types come back raw with their own Content-Type.
+
+What it is NOT:
+    - No JavaScript runs. JS-built sites (e.g. sbox.game) come back nearly empty (measured: 4 KB, title only).
+    - Not text extraction. You get raw HTML; turning it into readable text/markdown is on the caller.
+    - Not exposed over Studio's MCP server (/mcp/). That is what Task 0 is adding.
+
+Request fields (BrowserFetchRequest):
+    url         required, 1..8192 chars. A missing scheme gets normalized.
+    method      "GET" (default) or "POST"
+    body        optional string, max 1 MB (for POST)
+    max_bytes   optional, lowers the 50 MB fetch cap
+    error_page  bool, default false
+
+Where to read more in this repo:
+    studio/backend/routes/browser.py      BrowserFetchRequest (~line 1614), browser_fetch (~line 2427), _fetch/_build_response
+    studio/backend/main.py                router mounted at /api/browser (~line 2027)
+    studio/backend/tests/test_browser_routes.py      behavior pinned by tests
+    Live route list: http://localhost:8888/openapi.json (no auth)
+
+Sibling route: POST /api/browser/request is the relay a sandboxed page in the Studio browser uses for its own same-site fetch/XHR. It is not a general fetch API.
