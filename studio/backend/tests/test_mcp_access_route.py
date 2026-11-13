@@ -262,6 +262,6 @@ def test_an_unreadable_snapshot_sends_no_tool_list(client, monkeypatch):
 
     monkeypatch.setattr(mcp_access, "_read_from_db", broken)
     body = client.get(URL, headers = _owner_session()).json()
-    # null, never 23 tools that only look turned off: a toggle built on that view would save it.
+    # null, never a full tool list that only looks turned off: a toggle built on that view would save it.
     assert body["tools"] is None
     assert body["enabled"] is False

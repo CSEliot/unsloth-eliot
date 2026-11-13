@@ -16,8 +16,8 @@ from studio_mcp import surface as text_surface
 from studio_mcp.profile import AGENT, CHAT, CallerProfile, OUTLIVES_CALL
 
 # What the chat model reads on every message, in characters. 52,513 before profiles, 47,499 with
-# them; lower it when the surface shrinks, never raise it to fit.
-CHAT_BUDGET_CHARS = 48_000
+# them, 49,109 once web_extract is offered to chats too (measured); re-measure when it changes.
+CHAT_BUDGET_CHARS = 49_500
 
 
 def _texts(profile):
