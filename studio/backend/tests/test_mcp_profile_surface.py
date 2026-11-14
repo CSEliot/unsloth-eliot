@@ -30,6 +30,7 @@ def test_chat_withholds_each_tool_by_its_facts_and_never_names_one():
         "start_training",
         "export_model",
         "cancel",
+        "web_extract",
     }
     tools = _texts(CHAT)
     assert not absent & set(tools)

@@ -11,6 +11,7 @@ from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from studio_mcp import profile
 from studio_mcp.outputs import WebExtractResult, WebPage
 from studio_mcp.tools import route_json
 
@@ -88,3 +89,6 @@ async def web_extract(
 READ_ONLY_WEB = ToolAnnotations(readOnlyHint = True, openWorldHint = True)
 
 TOOLS = ((web_extract, READ_ONLY_WEB, WebExtractResult.model_json_schema()),)
+
+# A chat may not be talked into pulling a page into its own context: agents on /mcp keep it, chats do not.
+FACTS = {"web_extract": {profile.FETCHES_OPEN_WORLD}}
