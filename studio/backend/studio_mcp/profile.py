@@ -16,6 +16,7 @@ REENTERS_CHAT = "reenters_chat"
 STOPS_WORK = "stops_work"
 OUTLIVES_CALL = "outlives_call"
 SENDS_HOST_SECRETS = "sends_host_secrets"
+FETCHES_OPEN_WORLD = "fetches_open_world"
 
 REASONS = {
     SWAPS_MODELS: "it could unload the model serving the chat",
@@ -24,6 +25,7 @@ REASONS = {
     STOPS_WORK: "it could stop the chat that calls it",
     OUTLIVES_CALL: "it keeps working after the chat's per-call key is revoked",
     SENDS_HOST_SECRETS: "it can send host credentials and files to an endpoint a prompt names",
+    FETCHES_OPEN_WORLD: "it would pull a page a prompt names into the chat",
 }
 
 
