@@ -173,7 +173,7 @@ def test_the_reserved_url_is_port_agnostic_and_matches_the_frontend():
 def test_the_chat_instance_drops_exactly_the_withheld_tools():
     everything = [tool.name for tool in asyncio.run(create_studio_mcp().list_tools())]
     jobs = {"start_training", "export_model", "run_recipe"}
-    fetch = {"web_extract"}
+    fetch = {"web_extract", "web_browse"}
     assert CHAT_WITHHELD == {"chat", "cancel", "plan_load"} | jobs | fetch
     assert chat_tool_names() == [name for name in everything if name not in CHAT_WITHHELD]
     assert studio_tools_mcp.chat_tools_mcp() is studio_tools_mcp.chat_tools_mcp()

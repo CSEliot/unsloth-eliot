@@ -21,10 +21,12 @@ READ_ONLY = {
     "plan_load",
     "studio_status",
     "system_one",
+    "web_browse",
     "web_extract",
 }
 # The tools that reach the open internet rather than acting on this Studio only.
 OPEN_WORLD = {
+    "web_browse",
     "web_extract",
 }
 DESTRUCTIVE = {
@@ -116,6 +118,13 @@ SCHEMA_FACTS = [
     # the cap, so a smaller one comes back longer than the caller asked for.
     ("web_extract", "parameters/properties/max_chars/anyOf/0/minimum", 64),
     ("web_extract", "parameters/properties/max_chars/anyOf/0/maximum", 16000),
+    # web_browse's address bound is the browser's own (browser_agent._MAX_URL_CHARS), so an
+    # over-long address is refused by the schema instead of by the panel's validator.
+    ("web_browse", "parameters/properties/url/maxLength", 4096),
+    # A plain int, not web_extract's optional one: web_browse reads one page, so it splits no budget.
+    ("web_browse", "parameters/properties/max_chars/default", 16000),
+    ("web_browse", "parameters/properties/max_chars/minimum", 64),
+    ("web_browse", "parameters/properties/max_chars/maximum", 16000),
 ]
 
 
@@ -174,11 +183,11 @@ def test_the_catalog_is_the_registered_tools_in_order(fresh_access):
     ]
     assert [entry["name"] for entry in tool_catalog()] == registered
     assert list(tool_names()) == registered
-    assert len(registered) == 24
+    assert len(registered) == 25
     areas = {module.__name__.rsplit(".", 1)[-1] for module in TOOL_MODULES}
     assert {entry["area"] for entry in tool_catalog()} == areas
     assert tool_catalog()[0] == {"name": "studio_status", "area": "status"}
-    assert tool_catalog()[-1] == {"name": "web_extract", "area": "web"}
+    assert tool_catalog()[-1] == {"name": "web_browse", "area": "web"}
 
 
 def test_by_default_the_middleware_lists_every_tool(fresh_access):

@@ -6,6 +6,7 @@
 import asyncio
 import sys
 import threading
+import time
 import types
 
 import os
@@ -455,6 +456,92 @@ def test_another_session_or_account_cannot_answer():
     assert browser_actions.resolve_browser_action("a1", {"ok": True}, "s1", "acct")
     # First answer wins.
     assert not browser_actions.resolve_browser_action("a1", {"ok": False}, "s1", "acct")
+    assert browser_actions.wait_browser_action(slot, "a1", None, 1) == ("answered", {"ok": True})
+
+
+@pytest.fixture(autouse = True)
+def _empty_action_queues():
+    """An announced action outlives a failing assertion otherwise, and the next test's claim would
+    take it. Both queues are cleared after every test in this module, which no test relies on."""
+    yield
+    browser_actions._pending.clear()
+    browser_actions._announced.clear()
+
+
+def _announced(action_id, *, session = "", account = None):
+    """An action announced for the browser panel: the slot that answers it, and the dict it travels in."""
+    from utils.account_context import current_account_id
+
+    owner = current_account_id() if account is None else account
+    slot = browser_actions.begin_browser_action(action_id, session, owner)
+    action = {
+        "id": action_id,
+        "session_id": session,
+        "op": "navigate",
+        "url": "https://example.com/",
+        "allowed_domains": [],
+        "blocked_domains": [],
+        "timeout_s": 40.0,
+    }
+    browser_actions.announce_browser_action(action_id, slot, action)
+    return slot, action
+
+
+def test_a_claim_takes_the_oldest_action_and_only_once():
+    _slot, first = _announced("a1")
+    _slot, second = _announced("a2")
+    assert browser_actions.claim_browser_action("owner", 0) == first
+    assert browser_actions.claim_browser_action("owner", 0) == second
+    # Claimed is consumed: two panels polling must not both be given the same navigation.
+    assert browser_actions.claim_browser_action("owner", 0) is None
+
+
+def test_a_claim_waits_for_an_action_announced_later():
+    threading.Timer(0.05, _announced, args = ("late",)).start()
+    started = time.monotonic()
+    claimed = browser_actions.claim_browser_action("owner", 2)
+    assert claimed is not None and claimed["id"] == "late"
+    assert time.monotonic() - started < 2
+
+
+def test_a_claim_with_nothing_to_take_gives_up_when_its_wait_ends():
+    started = time.monotonic()
+    assert browser_actions.claim_browser_action("owner", 0.2) is None
+    # It parked rather than answering at once, and came back on its own bound.
+    assert 0.15 <= time.monotonic() - started < 2
+
+
+def test_a_claimed_action_is_answered_through_the_result_route():
+    slot, action = _announced("a1")
+    assert browser_actions.claim_browser_action("owner", 0) == action
+    # The panel posts its answer with the session the action carried, and the slot is still there to
+    # take it: claiming must not consume the answer's way back.
+    assert browser_actions.resolve_browser_action("a1", {"ok": True, "text": "hi"}, "", "owner")
+    assert browser_actions.wait_browser_action(slot, "a1", None, 1) == (
+        "answered",
+        {"ok": True, "text": "hi"},
+    )
+    assert not browser_actions.resolve_browser_action("a1", {"ok": False}, "", "owner")
+    assert browser_actions._pending == {} and browser_actions._announced == {}
+
+
+def test_another_accounts_action_stays_queued_for_its_own_panel():
+    _slot, theirs = _announced("a1", account = "alice")
+    assert browser_actions.claim_browser_action("owner", 0.05) is None
+    assert browser_actions.claim_browser_action("alice", 0) == theirs
+
+
+def test_a_slot_nobody_waits_on_is_never_handed_out():
+    slot, _action = _announced("a1")
+    browser_actions.discard_browser_action("a1", slot)
+    assert browser_actions.claim_browser_action("owner", 0) is None
+    assert browser_actions._announced == {}
+
+
+def test_an_action_already_answered_is_never_handed_out():
+    slot, _action = _announced("a1")
+    assert browser_actions.resolve_browser_action("a1", {"ok": True}, "", "owner")
+    assert browser_actions.claim_browser_action("owner", 0) is None
     assert browser_actions.wait_browser_action(slot, "a1", None, 1) == ("answered", {"ok": True})
 
 

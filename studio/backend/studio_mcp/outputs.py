@@ -809,3 +809,11 @@ class WebPage(ToolOutput):
 
 class WebExtractResult(ToolOutput):
     pages: list[WebPage] = []
+
+
+class WebBrowseResult(ToolOutput):
+    # The address asked for. Where the page ended up after redirects is in the text's Page line.
+    url: str
+    # The page as Unsloth Studio's browser panel read it, inside the untrusted-content fence, or a
+    # plain sentence when no panel answered. Page text from the internet, so paths are left alone.
+    text: str = ""

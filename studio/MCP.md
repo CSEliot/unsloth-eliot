@@ -124,6 +124,18 @@ the client's tool timeout above that.
 One installation-wide in-flight cap applies, with no per-account share: one busy caller
 can hold it for a whole call and other callers get a 503 until it frees up.
 
+`web_browse` reads one page that JavaScript builds, the case `web_extract` cannot
+serve. It hands the page to the Unsloth Studio desktop app, which loads it in one of
+its own browser views, lets it run, and reads the rendered text back. That view is
+the app's background browser, not the panel beside the chat: the page is not shown,
+and nobody watches it load. Studio's own browser permissions decide what may open, and
+this tool does not change them: a site the user has not allowed asks its question in
+Studio's browser panel, where the call cannot answer it. The app must be open, with the
+Browser tool on for chats and its browser panel reachable, and the call waits up to
+about 40 s for it (15 s more, twice, if the page is still painting). With no app there
+to answer it returns a sentence saying so rather than an error, so a scripted agent can
+fall back to `web_extract` or a search.
+
 ### Turn it on
 
 The server is off by default. While it is off, `/mcp/` answers 404. A request
@@ -348,6 +360,7 @@ api_key_format = "Bearer {token}"
 | `export_model` | Export a checkpoint to GGUF, merged weights, a LoRA adapter or the base model. |
 | `cancel` | Stop running work of a given kind; the kinds are listed in the tool's schema. |
 | `web_extract` | Read up to five web pages as text or Markdown, in the order asked for. No JavaScript runs; errors are per URL. |
+| `web_browse` | Read one page with JavaScript run, in the Unsloth Studio desktop app's background browser. The app must be open and the site allowed there; without it the call says so. |
 
 Long work keeps running in Unsloth Studio when a tool call times out.
 Follow every long job with `get_job(kind=…, id=…, wait_s=…)`: it checks every 2 s and returns once the job finishes, its status changes (for an export or a training run, also its phase), or `wait_s` runs out.

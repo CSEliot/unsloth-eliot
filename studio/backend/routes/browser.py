@@ -21,8 +21,8 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Literal, Optional
 from urllib.parse import quote, urljoin, urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from auth.authentication import get_current_subject
@@ -77,6 +77,13 @@ _REQUEST_POOL = ThreadPoolExecutor(max_workers = 8, thread_name_prefix = "browse
 _PAGE_REQUEST_SLOTS = threading.BoundedSemaphore(64)
 # The same bound for page loads: each queued fetch keeps its request (up to a 1 MB body).
 _FETCH_SLOTS = threading.BoundedSemaphore(64)
+
+# The browser panel's claim long poll (GET /api/browser/actions/claim): how long one poll parks by
+# default, and the most it may ask for. Parked polls get a pool of their own, as a panel that is not
+# open leaves them waiting on nothing and they must not hold a worker of the chat inference executor.
+CLAIM_WAIT_S = 20.0
+CLAIM_WAIT_MAX_S = 30.0
+_CLAIM_POOL = ThreadPoolExecutor(max_workers = 8, thread_name_prefix = "browser-claim")
 _MAX_PAGE_REQUEST_BODY = 1024 * 1024
 _MAX_PAGE_RESPONSE_BYTES = 10 * 1024 * 1024
 _HEADER_NAME_RE = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]{1,256}")
@@ -2581,6 +2588,42 @@ class BrowserPageCookie(BaseModel):
     key: str = Field(min_length = 2, max_length = 4096)
     value: Optional[str] = Field(default = None, max_length = 8192)
     same_site: Optional[str] = Field(default = None, max_length = 16)
+
+
+@router.get("/actions/claim")
+async def browser_claim_action(
+    wait: float = Query(default = CLAIM_WAIT_S, ge = 0, le = CLAIM_WAIT_MAX_S),
+    current_subject: str = Depends(get_current_subject),
+):
+    """Long poll for one browser action an agent outside a chat asked for (MCP ``web_browse``).
+
+    Answers ``{"action": null}`` when none arrives within ``wait``, so the panel simply polls again.
+    A delivered action is exactly what a chat's stream would carry minus its ``browser_action``
+    wrapper, so the panel's own executor runs it unchanged, and the answer goes back through
+    /api/inference/browser-action-result, which resolves the slot this route took it from. The wait
+    runs in a worker thread: a parked poll must not hold the event loop, and is bounded by ``wait``.
+    """
+    from state.browser_actions import claim_browser_action
+    from utils.account_context import current_account_id, via_api_key_context
+
+    # The claimer has to be the panel: an action taken by a key would run in the app of whoever is
+    # signed in there, on that user's pages, which is not what a key holder asked for. Keys (and
+    # keyless callers, which bind the same way) are refused rather than handed someone's panel.
+    if via_api_key_context():
+        raise HTTPException(
+            status_code = 403,
+            detail = (
+                "Browser actions can only be claimed by the Unsloth Studio app's own browser panel, "
+                "not with an API key. Open the desktop app and run the action again."
+            ),
+        )
+    # Read on the loop, not in the worker: a plain thread does not inherit this request's account.
+    account = current_account_id()
+    action = await asyncio.get_running_loop().run_in_executor(
+        _CLAIM_POOL, claim_browser_action, account, wait
+    )
+    # no-store: a replayed action would be run twice, and its second answer would match no slot.
+    return JSONResponse({"action": action}, headers = {"Cache-Control": "no-store"})
 
 
 @router.post("/cookie", status_code = 204)
