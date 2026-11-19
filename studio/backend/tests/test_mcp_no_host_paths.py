@@ -169,6 +169,7 @@ CASES: dict[str, Any] = {
         (VOICE_PAYLOADS, {"action": "rename", "voice_id": "voice-1", "name": "Host"}),
     ],
     "web_extract": (WEB_PAYLOADS, {"urls": WEB_URLS}),
+    "web_browse": ({}, {"url": "https://example.com/a"}),
 }
 
 # Output keys that carry text that came from outside Unsloth Studio and is never rewritten: model
@@ -182,6 +183,9 @@ MODEL_TEXT = {
     "list_media": {"text"},
     "analyze_audio": {"transcript"},
     "web_extract": {"text"},
+    # The panel's page text is the page's own words, as web_extract's is. This case answers as a
+    # panel that never polls, so what it really pins is that the refusal sentence carries no path.
+    "web_browse": {"text"},
 }
 
 
@@ -201,6 +205,18 @@ def leaks(result: dict, ignore: frozenset = frozenset()) -> Optional[str]:
 
 
 def run_case(monkeypatch, mcp, name: str, routes: dict, args: dict) -> dict:
+    if name == "web_browse":
+        # web_browse waits on the browser panel, not on a route: with no panel polling it would park
+        # for its real 40 s. The waits are shortened and the browser's host check is answered, so the
+        # case is the refusal sentence a closed app produces, without a DNS lookup or a minute's wait.
+        from core.inference import tools as inference_tools
+        from studio_mcp.tools import web as web_tool
+
+        monkeypatch.setattr(
+            inference_tools, "_validate_and_resolve_host", lambda host, port: (True, "", ["93.184.215.14"])
+        )
+        monkeypatch.setattr(web_tool, "NAVIGATE_WAIT_S", 0.01)
+        monkeypatch.setattr(web_tool, "SNAPSHOT_WAIT_S", 0.01)
     with TestClient(served(mcp, fake_studio(poison(routes)), monkeypatch = monkeypatch)) as http:
         return call_tool(http, name, args)
 

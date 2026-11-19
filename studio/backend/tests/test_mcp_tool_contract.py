@@ -75,6 +75,12 @@ REFUSED = [
     ("web_extract", {"urls": ["https://example.com/a"], "max_chars": 63}, None),
     # And the top of the range, which is a refusal path of its own.
     ("web_extract", {"urls": ["https://example.com/a"], "max_chars": 16001}, None),
+    # web_browse refuses a non-web address, a local one, an empty one and a navigation word before
+    # it announces anything to the browser panel, so no panel ever sees them.
+    ("web_browse", {"url": "file:///etc/passwd"}, "only http/https URLs are allowed."),
+    ("web_browse", {"url": "http://10.0.0.1/"}, "not a public address"),
+    ("web_browse", {"url": ""}, None),
+    ("web_browse", {"url": "back"}, 'url must be a full http(s) address'),
     ("embed", {"texts": ["x"], "top_k": 3}, "top_k needs query."),
     ("system_one", {"state": "x", "questions": {}}, None),
     ("system_one", {"state": "x", "questions": {f"q{i}": {} for i in range(65)}}, None),

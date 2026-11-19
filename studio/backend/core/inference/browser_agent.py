@@ -838,6 +838,27 @@ def _png_size(url: str) -> Optional[tuple[int, int]]:
     return struct.unpack(">II", head[16:24])
 
 
+def action_payload(
+    action_id: str,
+    session_id: Optional[str],
+    request: dict,
+    website_policy: dict,
+    timeout_s: float,
+) -> dict:
+    """The one shape an action travels in, whether it is announced to a chat tab through a stream or
+    to the desktop app's browser panel through the claim route: its id, the session it answers for,
+    the request's own fields, the site policy the tab enforces and how long the asker waits."""
+    return {
+        "id": action_id,
+        "session_id": session_id or "",
+        **request,
+        "allowed_domains": list(website_policy["allowedDomains"]),
+        "blocked_domains": list(website_policy["blockedDomains"]),
+        # The tab drops an unanswered question once this side stops waiting, so a late Allow can't run.
+        "timeout_s": timeout_s,
+    }
+
+
 def execute_browser_tool(
     name: str,
     arguments: dict,
@@ -882,17 +903,7 @@ def execute_browser_tool(
     )
     try:
         output_callback(
-            {
-                "browser_action": {
-                    "id": action_id,
-                    "session_id": session_id or "",
-                    **request,
-                    "allowed_domains": list(policy["allowedDomains"]),
-                    "blocked_domains": list(policy["blockedDomains"]),
-                    # The tab drops an unanswered question once this side stops waiting, so a late Allow can't run.
-                    "timeout_s": wait,
-                }
-            }
+            {"browser_action": action_payload(action_id, session_id, request, policy, wait)}
         )
     except BaseException:
         discard_browser_action(action_id, slot)

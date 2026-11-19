@@ -16,7 +16,8 @@ from studio_mcp import surface as text_surface
 from studio_mcp.profile import AGENT, CHAT, CallerProfile, OUTLIVES_CALL
 
 # What the chat model reads on every message, in characters. 52,513 before profiles, 47,499 with
-# them; lower it when the surface shrinks, never raise it to fit.
+# them; lower it when the surface shrinks, never raise it to fit. A tool the chat is withheld costs
+# it nothing, which is why web_browse leaves this alone: FETCHES_OPEN_WORLD withholds it, as web_extract.
 CHAT_BUDGET_CHARS = 48_000
 
 
@@ -32,6 +33,7 @@ def test_chat_withholds_each_tool_by_its_facts_and_never_names_one():
         "export_model",
         "cancel",
         "web_extract",
+        "web_browse",
     }
     tools = _texts(CHAT)
     assert not absent & set(tools)
