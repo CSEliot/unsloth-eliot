@@ -77,7 +77,9 @@ REFUSED = [
     ("web_extract", {"urls": ["https://example.com/a"], "max_chars": 16001}, None),
     # web_browse refuses a non-web address, a local one, an empty one and a navigation word before
     # it announces anything to the browser panel, so no panel ever sees them.
-    ("web_browse", {"url": "file:///etc/passwd"}, "only http/https URLs are allowed."),
+    # A file: address reaches the workspace check upstream added, so the sentence names the workspace.
+    ("web_browse", {"url": "file:///etc/passwd"}, "is outside the workspace"),
+    ("web_browse", {"url": "ftp://example.com/x"}, "only http/https URLs are allowed."),
     ("web_browse", {"url": "http://10.0.0.1/"}, "not a public address"),
     ("web_browse", {"url": ""}, None),
     ("web_browse", {"url": "back"}, 'url must be a full http(s) address'),
