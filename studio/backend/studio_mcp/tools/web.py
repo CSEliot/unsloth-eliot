@@ -247,7 +247,7 @@ async def _ask_panel(request: dict, policy: dict, wait: float) -> Optional[dict]
     worker thread because the answer arrives on a slot this call blocks on, and blocking the event
     loop would stall every other MCP call and Studio request for up to the wait bound.
     """
-    from core.inference.browser_agent import action_payload
+    from studio_mcp.action_payload import action_payload
     from state.browser_actions import (
         announce_browser_action,
         begin_browser_action,
